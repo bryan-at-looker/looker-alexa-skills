@@ -1,0 +1,65 @@
+service: looker-alexa # NOTE: update this with your service name
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+
+functions:
+  meetupHandler:
+    handler: app.lookerHandler
+    environment:
+      looker_client_id: ${file(.env.yml):LOOKER_CLIENT_ID}
+      looker_client_secret: ${file(.env.yml):LOOKER_CLIENT_SECRET}
+      looker_api_url: ${file(.env.yml):LOOKER_API_URL}
+      intent_look_map: ${file(./.intent_look_map)}
+    events:
+      - alexaSkill: amzn1.ask.skill.824ea528-52ac-4222-8404-88f130e6190c
+
+plugins:
+  - serverless-alexa-skills
+custom:
+  alexa:
+    vendorId: ${file(.env.yml):AMAZON_VENDOR_ID}
+    clientId: ${file(.env.yml):AMAZON_CLIENT_ID}
+    clientSecret: ${file(.env.yml):AMAZON_CLIENT_SECRET}
+    localServerPort: 9000
+    skills:
+      - id: amzn1.ask.skill.824ea528-52ac-4222-8404-88f130e6190c
+        manifest:
+          publishingInformation:
+            locales:
+              en-US:
+                name: Looker
+          apis:
+            custom:
+              endpoint:
+                uri: arn:aws:lambda:us-east-1:026411432141:function:looker-alexa-dev-meetupHandler
+          manifestVersion: '1.0'
+        models:
+          en-US:
+            interactionModel:
+              languageModel:
+                invocationName: looker
+                intents:
+                  - name: ActiveUsers
+                    samples:
+                    - 'todays active users'
+                    - 'active users compared to yesterday'
+                    - 'active user status'
+                  - name: BusySalesPeople
+                    samples:
+                    - 'who needs help this week'
+                    - 'which salespeople need help this week'
+                    - 'busy salespeople'
+                  - name: TopBrands
+                    samples:
+                    - 'top brands this week'
+                  - name: TopTrendingCategories
+                    samples:
+                    - 'categories are trending'
+                  - name: AMAZON.HelpIntent
+                    samples: []
+                  - name: AMAZON.CancelIntent
+                    samples: []
+                  - name: AMAZON.StopIntent
+                    samples: []
