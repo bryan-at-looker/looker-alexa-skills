@@ -4,12 +4,13 @@ console.log('Made It')
 
 const Alexa = require('ask-sdk-core');
 const https = require('request');
+const Messages = require('./Messages');
 
 const LOOKER_CLIENT_ID = process.env.looker_client_id;
 const LOOKER_CLIENT_SECRET = process.env.looker_client_secret;
 const LOOKER_API_URL = process.env.looker_api_url;
 const intent_look_map = JSON.parse(process.env.intent_look_map);
-const SKILL_NAME = 'Active Users';
+const SKILL_NAME = 'Looker Skills';
 // const MEETUP_URL = `https://api.meetup.com/desiconnections/events?key=${MEETUP_API_KEY}&sign=true`;
 
 // Handlers
@@ -40,6 +41,13 @@ const SkillHandler = {
         console.log(look_id)
         console.log('Made It to Active Users')
         var options = { json: true };
+
+        try {
+            await callDirectiveService(handlerInput, '');
+        } catch (err) {
+            // if it failed we can continue, just the user will wait longer for first response
+            console.log(err);
+        }
         
         try {
             // speechText = "You have no active users, you loser"
@@ -219,14 +227,52 @@ async function runLook (look_id, options, force_limit) {
             resolve (cleanup_alexa(speechText));
         });
     });
-} 
+}
+
+function callDirectiveService(handlerInput, input) {
+    // Call Alexa Directive Service.
+    console.log('made it to directive')
+    console.log(`${Messages.DIRECTIVESERVICEMESSAGE}`)
+    const requestEnvelope = handlerInput.requestEnvelope;
+    const directiveServiceClient = handlerInput.serviceClientFactory.getDirectiveServiceClient();
+    
+
+    const requestId = requestEnvelope.request.requestId;
+    const endpoint = requestEnvelope.context.System.apiEndpoint;
+    const token = requestEnvelope.context.System.apiAccessToken;
+
+    // build the progressive response directive
+    const directive = {
+        header: {
+        requestId,
+        },
+        directive: {
+        type: 'VoicePlayer.Speak',
+        speech: `${Messages.DIRECTIVESERVICEMESSAGE} ${input}.<break time= "1s"/>`,
+        },
+    };
+
+    // const directive = {
+    //     header: {
+    //     requestId,
+    //     },
+    //     directive: {
+    //     type: 'VoicePlayer.Speak',
+    //     speech: `${Messages.DIRECTIVESERVICEMESSAGE} ${input}...`,
+    //     },
+    // };
+
+    // send directive
+    return directiveServiceClient.enqueue(directive, endpoint, token);
+}
 
 // export the handlers
 exports.lookerHandler = Alexa.SkillBuilders.custom()
-     .addRequestHandlers(LaunchRequestHandler,
+    .addRequestHandlers(LaunchRequestHandler,
                          SkillHandler,
                          HelpIntentHandler,
                          CancelAndStopIntentHandler,
                          SessionEndedRequestHandler)
+    .withApiClient(new Alexa.DefaultApiClient())
     .addErrorHandlers(ErrorHandler)
     .lambda();
